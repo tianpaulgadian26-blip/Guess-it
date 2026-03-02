@@ -100,9 +100,69 @@
         .dot.completed {
             background: #48bb78;
         }
+
+        .music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .music-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .music-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .music-btn.playing {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(118, 75, 162, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(118, 75, 162, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(118, 75, 162, 0); }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
+
+    <!-- Music Control -->
+    <div class="music-control">
+        <button id="music-toggle" onclick="toggleMusic()" class="music-btn">
+            <i class="fas fa-volume-mute text-purple-600 text-xl" id="music-icon"></i>
+        </button>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="bg-music" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="correct-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3?filename=success-1-6297.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="wrong-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_c8c8a73467.mp3?filename=error-1-51416.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="clue-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_36d0e9d538.mp3?filename=pop-1-6297.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="win-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_d3572ee2c1.mp3?filename=win-1-6297.mp3" type="audio/mpeg">
+    </audio>
 
     <!-- Start Screen -->
     <div id="start-screen" class="glass-card p-8 max-w-md w-full text-center">
@@ -112,6 +172,12 @@
             <p class="text-gray-600">Guess the destination!</p>
         </div>
         <p class="mb-8 text-gray-500">Read the clues, look at the images, and test your geography knowledge.</p>
+        <div class="flex items-center justify-center gap-3 mb-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="music-checkbox" checked onchange="toggleMusic()">
+                <span class="text-gray-600 text-sm">Enable Background Music</span>
+            </label>
+        </div>
         <button onclick="startGame()" class="btn-primary text-white font-bold py-3 px-8 rounded-full w-full text-lg shadow-lg">
             Start Adventure
         </button>
@@ -294,8 +360,70 @@
         let score = 0;
         let cluesRevealed = 0;
         let isLevelComplete = false;
+        let isMusicPlaying = false;
+
+        // Audio Elements
+        const bgMusic = document.getElementById('bg-music');
+        const correctSound = document.getElementById('correct-sound');
+        const wrongSound = document.getElementById('wrong-sound');
+        const clueSound = document.getElementById('clue-sound');
+        const winSound = document.getElementById('win-sound');
+        const musicToggle = document.getElementById('music-toggle');
+        const musicIcon = document.getElementById('music-icon');
+
+        // Set background music volume lower
+        bgMusic.volume = 0.3;
+        correctSound.volume = 0.5;
+        wrongSound.volume = 0.5;
+        clueSound.volume = 0.4;
+        winSound.volume = 0.5;
+
+        function toggleMusic() {
+            isMusicPlaying = !isMusicPlaying;
+            if (isMusicPlaying) {
+                bgMusic.play().catch(e => console.log('Audio play failed:', e));
+                musicToggle.classList.add('playing');
+                musicIcon.classList.remove('fa-volume-mute');
+                musicIcon.classList.add('fa-volume-up');
+            } else {
+                bgMusic.pause();
+                musicToggle.classList.remove('playing');
+                musicIcon.classList.remove('fa-volume-up');
+                musicIcon.classList.add('fa-volume-mute');
+            }
+        }
+
+        function playCorrectSound() {
+            correctSound.currentTime = 0;
+            correctSound.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function playWrongSound() {
+            wrongSound.currentTime = 0;
+            wrongSound.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function playClueSound() {
+            clueSound.currentTime = 0;
+            clueSound.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function playWinSound() {
+            winSound.currentTime = 0;
+            winSound.play().catch(e => console.log('Audio play failed:', e));
+        }
 
         function startGame() {
+            // Start music if enabled
+            const musicCheckbox = document.getElementById('music-checkbox');
+            if (musicCheckbox.checked) {
+                isMusicPlaying = true;
+                bgMusic.play().catch(e => console.log('Audio play failed:', e));
+                musicToggle.classList.add('playing');
+                musicIcon.classList.remove('fa-volume-mute');
+                musicIcon.classList.add('fa-volume-up');
+            }
+
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
             loadLevel(0);
@@ -343,6 +471,9 @@
                 clueEl.classList.add('active');
                 cluesRevealed++;
                 
+                // Play clue sound
+                playClueSound();
+                
                 // Change button text if last clue
                 if (cluesRevealed === 3) {
                     document.getElementById('next-clue-btn').classList.add('hidden');
@@ -360,6 +491,7 @@
             // BUG FIX: Check if input is empty before validating
             if (!input || input.length === 0) {
                 handleError("Please enter a guess!");
+                playWrongSound();
                 return;
             }
 
@@ -369,6 +501,7 @@
             } else {
                 // Incorrect
                 handleError();
+                playWrongSound();
             }
         }
 
@@ -378,6 +511,9 @@
             feedback.innerText = "Correct! Amazing!";
             feedback.className = "mt-3 text-center font-semibold h-6 text-green-600";
             feedback.classList.add('animate-bounce');
+            
+            // Play correct sound
+            playCorrectSound();
             
             document.getElementById('guess-input').disabled = true;
             document.getElementById('next-clue-btn').classList.add('hidden');
@@ -431,6 +567,9 @@
             document.getElementById('end-screen').classList.remove('hidden');
             document.getElementById('final-score').innerText = score;
             
+            // Play win sound
+            playWinSound();
+            
             // Final Confetti burst
             var duration = 3 * 1000;
             var animationEnd = Date.now() + duration;
@@ -450,6 +589,7 @@
 
         function quitGame() {
             if(confirm("Are you sure you want to quit?")) {
+                bgMusic.pause();
                 location.reload();
             }
         }
