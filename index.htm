@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Traveler Guessing Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .clue-item {
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            display: none;
+        }
+
+        .clue-item.active {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .image-container:hover img {
+            transform: scale(1.05);
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .progress-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: #764ba2;
+            transform: scale(1.2);
+        }
+
+        .dot.completed {
+            background: #48bb78;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="glass-card p-8 max-w-md w-full text-center">
+        <div class="mb-6">
+            <i class="fas fa-plane-departure text-6xl text-purple-600 mb-4 animate-bounce"></i>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">World Traveler</h1>
+            <p class="text-gray-600">Guess the destination!</p>
+        </div>
+        <p class="mb-8 text-gray-500">Read the clues, look at the images, and test your geography knowledge.</p>
+        <button onclick="startGame()" class="btn-primary text-white font-bold py-3 px-8 rounded-full w-full text-lg shadow-lg">
+            Start Adventure
+        </button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden glass-card p-6 max-w-4xl w-full">
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-2">
+                <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Level <span id="level-indicator">1</span>/8</span>
+                <span class="text-gray-500 text-sm">Score: <span id="score-display" class="font-bold text-purple-600">0</span></span>
+            </div>
+            <button onclick="quitGame()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Image Section -->
+            <div class="image-container h-64 md:h-80 bg-gray-200">
+                <img id="place-image" src="" alt="Mystery Place" class="w-full h-full">
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                    <h2 id="place-name-reveal" class="text-white text-2xl font-bold hidden"></h2>
+                </div>
+            </div>
+
+            <!-- Clues Section -->
+            <div class="flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-search-location text-purple-500"></i> Where am I?
+                    </h3>
+                    
+                    <div id="clues-container" class="space-y-3 mb-6">
+                        <!-- Clues injected here -->
+                    </div>
+
+                    <div id="input-area" class="space-y-3">
+                        <input type="text" id="guess-input" placeholder="Type your guess here..." 
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition">
+                        <button onclick="checkGuess()" class="btn-primary text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">
+                            Submit Guess
+                        </button>
+                    </div>
+
+                    <div id="feedback-msg" class="mt-3 text-center font-semibold h-6"></div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <button id="next-clue-btn" onclick="revealClue()" class="w-full bg-white text-purple-600 border-2 border-purple-100 hover:border-purple-500 hover:bg-purple-50 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fas fa-lightbulb text-yellow-400"></i> Reveal Next Clue
+                    </button>
+                    <button id="next-level-btn" onclick="nextLevel()" class="hidden w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition">
+                        Next Destination <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" class="hidden glass-card p-8 max-w-md w-full text-center">
+        <div class="mb-6">
+            <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Adventure Complete!</h1>
+            <p class="text-gray-600">You've traveled the world!</p>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-6 mb-8">
+            <p class="text-gray-500 text-sm uppercase tracking-wide">Final Score</p>
+            <p class="text-5xl font-extrabold text-purple-600" id="final-score">0</p>
+        </div>
+        <button onclick="location.reload()" class="btn-primary text-white font-bold py-3 px-8 rounded-full w-full text-lg shadow-lg">
+            Play Again
+        </button>
+    </div>
+
+    <script>
+        const gameData = [
+            {
+                place: "South Korea",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1c88ee1dd-2acc-4929-8613-50a6c2d095a8.png",
+                clues: [
+                    "I am famous for K-pop, K-dramas, and delicious kimchi.",
+                    "My capital city is Seoul and I am located in East Asia.",
+                    "I am home to the historic Gyeongbokgung Palace."
+                ],
+                answers: ["south korea", "korea"]
+            },
+            {
+                place: "Netherlands",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/18ef9d399-384f-4678-9548-3ed6962d5762.png",
+                clues: [
+                    "I am known for my colorful tulip fields and beautiful windmills.",
+                    "Every spring, millions of flowers bloom across my land.",
+                    "My capital city is Amsterdam."
+                ],
+                answers: ["netherlands", "holland", "amsterdam"]
+            },
+            {
+                place: "Paris",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1a5cddf02-4db9-4c54-825c-f4e108653dcf.png",
+                clues: [
+                    "I am the iconic 300-meter iron tower.",
+                    "I am known as the 'city of love'.",
+                    "I have the scenic Seine River flowing through the heart of the city."
+                ],
+                answers: ["paris", "france", "eiffel tower"]
+            },
+            {
+                place: "Banaue Rice Terraces",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1413b4b1f-8565-41db-8719-23a51204db6e.png",
+                clues: [
+                    "I am the ancient, hand-curved mountain steps created by indigenous people.",
+                    "I belong to the 'Eight Wonder of the World'.",
+                    "I was built over 2,000 years ago using an ingenious, sustainable irrigation system."
+                ],
+                answers: ["banaue", "banaue rice terraces", "ifugao", "philippines"]
+            },
+            {
+                place: "Tokyo",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/18bc08ecd-35bd-40e6-8006-817a8d4c9515.png",
+                clues: [
+                    "Busy intersection known for scramble crossing.",
+                    "Iconic spot for people-watching and shopping.",
+                    "Often featured in movies and TV shows (Shibuya)."
+                ],
+                answers: ["tokyo", "shibuya", "shibuya crossing", "japan"]
+            },
+            {
+                place: "England",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1a9ad6c1b-9706-4af5-9e8e-bf55311895fe.png",
+                clues: [
+                    "My government system is monarchy.",
+                    "I have famous tourist spots, such as, Stonehenge, Buckingham Palace, and tower of London.",
+                    "The novel Harry Potter is born here."
+                ],
+                answers: ["england", "united kingdom", "uk", "london", "great britain"]
+            },
+            {
+                place: "Italy",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/19f8aa546-e254-418b-b534-3188045b2a46.png",
+                clues: [
+                    "I am home to a famous leaning tower and delicious pizza loved around the world.",
+                    "Ancient gladiators once fought in my grand Colosseum.",
+                    "I am shaped like a boot on the map of Europe."
+                ],
+                answers: ["italy", "rome", "pisa"]
+            },
+            {
+                place: "United States",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1aed5fb4b-62ef-4d16-9f1a-95c9670d3d3d.png",
+                clues: [
+                    "I have 50 states and a famous statue that welcomes visitors in New York Harbor.",
+                    "Hollywood movies and pop stars often come from my land.",
+                    "I am known as the 'Land of the Free' and have the White House as my president's home."
+                ],
+                answers: ["usa", "united states", "america", "united states of america"]
+            }
+        ];
+
+        let currentLevel = 0;
+        let score = 0;
+        let cluesRevealed = 0;
+        let isLevelComplete = false;
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            loadLevel(0);
+        }
+
+        function loadLevel(index) {
+            currentLevel = index;
+            cluesRevealed = 0;
+            isLevelComplete = false;
+            
+            // Reset UI
+            document.getElementById('level-indicator').innerText = currentLevel + 1;
+            document.getElementById('guess-input').value = '';
+            document.getElementById('guess-input').disabled = false;
+            document.getElementById('feedback-msg').innerText = '';
+            document.getElementById('feedback-msg').className = 'mt-3 text-center font-semibold h-6';
+            document.getElementById('place-name-reveal').classList.add('hidden');
+            document.getElementById('next-clue-btn').classList.remove('hidden');
+            document.getElementById('next-level-btn').classList.add('hidden');
+            
+            // Load Image
+            document.getElementById('place-image').src = gameData[currentLevel].image;
+
+            // Reset Clues
+            const container = document.getElementById('clues-container');
+            container.innerHTML = '';
+            gameData[currentLevel].clues.forEach((clue, i) => {
+                const div = document.createElement('div');
+                div.className = `clue-item p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300 text-gray-700 text-sm`;
+                div.innerHTML = `<strong>Clue ${i+1}:</strong> ${clue}`;
+                div.id = `clue-${i}`;
+                container.appendChild(div);
+            });
+
+            updateDots();
+        }
+
+        function updateDots() {
+            // Optional: Add progress dots logic if needed, currently using level indicator
+        }
+
+        function revealClue() {
+            if (cluesRevealed < 3) {
+                const clueEl = document.getElementById(`clue-${cluesRevealed}`);
+                clueEl.classList.add('active');
+                cluesRevealed++;
+                
+                // Change button text if last clue
+                if (cluesRevealed === 3) {
+                    document.getElementById('next-clue-btn').classList.add('hidden');
+                }
+            }
+        }
+
+        function checkGuess() {
+            if (isLevelComplete) return;
+
+            const input = document.getElementById('guess-input').value.trim().toLowerCase();
+            const feedback = document.getElementById('feedback-msg');
+            const validAnswers = gameData[currentLevel].answers;
+
+            if (validAnswers.some(ans => input.includes(ans) || ans.includes(input))) {
+                // Correct
+                handleSuccess();
+            } else {
+                // Incorrect
+                handleError();
+            }
+        }
+
+        function handleSuccess() {
+            isLevelComplete = true;
+            const feedback = document.getElementById('feedback-msg');
+            feedback.innerText = "Correct! Amazing!";
+            feedback.className = "mt-3 text-center font-semibold h-6 text-green-600";
+            feedback.classList.add('animate-bounce');
+            
+            document.getElementById('guess-input').disabled = true;
+            document.getElementById('next-clue-btn').classList.add('hidden');
+            document.getElementById('next-level-btn').classList.remove('hidden');
+            
+            // Reveal all clues
+            for(let i=0; i<3; i++) {
+                document.getElementById(`clue-${i}`).classList.add('active');
+            }
+
+            // Show Place Name
+            document.getElementById('place-name-reveal').innerText = gameData[currentLevel].place;
+            document.getElementById('place-name-reveal').classList.remove('hidden');
+
+            // Add Score
+            const points = (4 - cluesRevealed) * 100; // More points for fewer clues
+            score += (points > 0 ? points : 100);
+            document.getElementById('score-display').innerText = score;
+
+            // Confetti
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        function handleError() {
+            const input = document.getElementById('guess-input');
+            const feedback = document.getElementById('feedback-msg');
+            
+            input.classList.add('shake');
+            feedback.innerText = "Not quite, try again!";
+            feedback.className = "mt-3 text-center font-semibold h-6 text-red-500";
+            
+            setTimeout(() => {
+                input.classList.remove('shake');
+            }, 500);
+        }
+
+        function nextLevel() {
+            if (currentLevel < gameData.length - 1) {
+                loadLevel(currentLevel + 1);
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            
+            // Final Confetti burst
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function quitGame() {
+            if(confirm("Are you sure you want to quit?")) {
+                location.reload();
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('guess-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+    </script>
+</body>
+</html>
+
