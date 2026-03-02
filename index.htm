@@ -121,7 +121,7 @@
     <div id="game-screen" class="hidden glass-card p-6 max-w-4xl w-full">
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-2">
-                <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Level <span id="level-indicator">1</span>/8</span>
+                <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Level <span id="level-indicator">1</span>/10</span>
                 <span class="text-gray-500 text-sm">Score: <span id="score-display" class="font-bold text-purple-600">0</span></span>
             </div>
             <button onclick="quitGame()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
@@ -260,13 +260,33 @@
             },
             {
                 place: "United States",
-                image: "https://www.freepik.com/photos/usa",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1aed5fb4b-62ef-4d16-9f1a-95c9670d3d3d.png",
                 clues: [
                     "I have 50 states and a famous statue that welcomes visitors in New York Harbor.",
                     "Hollywood movies and pop stars often come from my land.",
                     "I am known as the 'Land of the Free' and have the White House as my president's home."
                 ],
                 answers: ["usa", "united states", "america", "united states of america"]
+            },
+            {
+                place: "Bangkok, Thailand",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/1b2c3d4e5-6789-4abc-def0-123456789abc.png",
+                clues: [
+                    "I am famous for the delicious mango sticky rice.",
+                    "I am known for its exciting New Year water festival.",
+                    "I am a country known for a spicy cuisine."
+                ],
+                answers: ["bangkok", "thailand", "bangkok thailand"]
+            },
+            {
+                place: "China",
+                image: "https://image.qwenlm.ai/public_source/437a0e34-900a-4c5e-b1a6-ad7b2033e0ff/2c3d4e5f6-7890-4bcd-ef01-234567890bcd.png",
+                clues: [
+                    "I am an East Asian country known for the famous Great Wall.",
+                    "I am the home to the historic Forbidden City and Tiananmen Square.",
+                    "My country's new year is being celebrated on Jan 21."
+                ],
+                answers: ["china", "beijing", "prc"]
             }
         ];
 
@@ -337,6 +357,12 @@
             const feedback = document.getElementById('feedback-msg');
             const validAnswers = gameData[currentLevel].answers;
 
+            // BUG FIX: Check if input is empty before validating
+            if (!input || input.length === 0) {
+                handleError("Please enter a guess!");
+                return;
+            }
+
             if (validAnswers.some(ans => input.includes(ans) || ans.includes(input))) {
                 // Correct
                 handleSuccess();
@@ -379,12 +405,12 @@
             });
         }
 
-        function handleError() {
+        function handleError(customMsg) {
             const input = document.getElementById('guess-input');
             const feedback = document.getElementById('feedback-msg');
             
             input.classList.add('shake');
-            feedback.innerText = "Not quite, try again!";
+            feedback.innerText = customMsg || "Not quite, try again!";
             feedback.className = "mt-3 text-center font-semibold h-6 text-red-500";
             
             setTimeout(() => {
