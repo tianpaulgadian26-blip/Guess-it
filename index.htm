@@ -136,6 +136,79 @@
             70% { box-shadow: 0 0 0 15px rgba(118, 75, 162, 0); }
             100% { box-shadow: 0 0 0 0 rgba(118, 75, 162, 0); }
         }
+
+        .wrong-count {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Big X Overlay */
+        .x-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .x-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .big-x {
+            font-size: 200px;
+            color: #ef4444;
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+            animation: xPulse 0.5s ease-in-out;
+        }
+
+        @keyframes xPulse {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .points-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+
+        .points-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .points-row:last-child {
+            border-bottom: none;
+        }
+
+        .points-value {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
@@ -145,6 +218,11 @@
         <button id="music-toggle" onclick="toggleMusic()" class="music-btn">
             <i class="fas fa-volume-mute text-purple-600 text-xl" id="music-icon"></i>
         </button>
+    </div>
+
+    <!-- Big X Overlay -->
+    <div id="x-overlay" class="x-overlay">
+        <div class="big-x"><i class="fas fa-times"></i></div>
     </div>
 
     <!-- Audio Elements -->
@@ -157,11 +235,17 @@
     <audio id="wrong-sound">
         <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_c8c8a73467.mp3?filename=error-1-51416.mp3" type="audio/mpeg">
     </audio>
+    <audio id="buzzer-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_7f1d4d0d36.mp3?filename=buzzer-1-6297.mp3" type="audio/mpeg">
+    </audio>
     <audio id="clue-sound">
         <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_36d0e9d538.mp3?filename=pop-1-6297.mp3" type="audio/mpeg">
     </audio>
     <audio id="win-sound">
         <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_d3572ee2c1.mp3?filename=win-1-6297.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="skip-sound">
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_5c5c12c6e9.mp3?filename=whoosh-1-6297.mp3" type="audio/mpeg">
     </audio>
 
     <!-- Start Screen -->
@@ -171,7 +255,27 @@
             <h1 class="text-4xl font-extrabold text-gray-800 mb-2">World Traveler</h1>
             <p class="text-gray-600">Guess the destination!</p>
         </div>
-        <p class="mb-8 text-gray-500">Read the clues, look at the images, and test your geography knowledge.</p>
+        
+        <!-- Points Information -->
+        <div class="points-info">
+            <h3 class="font-bold text-lg mb-3"><i class="fas fa-trophy mr-2"></i>Points System</h3>
+            <div class="points-row">
+                <span><i class="fas fa-star text-yellow-300 mr-2"></i>1 Clue Used</span>
+                <span class="points-value">300 pts</span>
+            </div>
+            <div class="points-row">
+                <span><i class="fas fa-star text-yellow-300 mr-2"></i>2 Clues Used</span>
+                <span class="points-value">200 pts</span>
+            </div>
+            <div class="points-row">
+                <span><i class="fas fa-star text-yellow-300 mr-2"></i>3 Clues Used</span>
+                <span class="points-value">100 pts</span>
+            </div>
+        </div>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-left">
+            <p class="text-yellow-700 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Rule:</strong> 3 wrong guesses = automatic skip!</p>
+        </div>
         <div class="flex items-center justify-center gap-3 mb-6">
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" id="music-checkbox" checked onchange="toggleMusic()">
@@ -189,6 +293,7 @@
             <div class="flex items-center gap-2">
                 <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Level <span id="level-indicator">1</span>/10</span>
                 <span class="text-gray-500 text-sm">Score: <span id="score-display" class="font-bold text-purple-600">0</span></span>
+                <span class="text-gray-500 text-sm">Correct: <span id="correct-display" class="font-bold text-green-600">0</span>/10</span>
             </div>
             <button onclick="quitGame()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
         </div>
@@ -197,6 +302,9 @@
             <!-- Image Section -->
             <div class="image-container h-64 md:h-80 bg-gray-200">
                 <img id="place-image" src="" alt="Mystery Place" class="w-full h-full">
+                <div class="wrong-count" id="wrong-count-display">
+                    <i class="fas fa-times-circle mr-1"></i><span id="wrong-count">0</span>/3
+                </div>
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                     <h2 id="place-name-reveal" class="text-white text-2xl font-bold hidden"></h2>
                 </div>
@@ -243,10 +351,23 @@
             <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Adventure Complete!</h1>
             <p class="text-gray-600">You've traveled the world!</p>
         </div>
-        <div class="bg-purple-50 rounded-xl p-6 mb-8">
-            <p class="text-gray-500 text-sm uppercase tracking-wide">Final Score</p>
-            <p class="text-5xl font-extrabold text-purple-600" id="final-score">0</p>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-green-50 rounded-xl p-6">
+                <p class="text-gray-500 text-sm uppercase tracking-wide">Correct</p>
+                <p class="text-4xl font-extrabold text-green-600" id="correct-final">0</p>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-6">
+                <p class="text-gray-500 text-sm uppercase tracking-wide">Total Score</p>
+                <p class="text-4xl font-extrabold text-purple-600" id="final-score">0</p>
+            </div>
         </div>
+        
+        <div class="bg-gray-100 rounded-xl p-4 mb-8">
+            <p class="text-gray-600 text-lg">You got <span id="result-fraction" class="font-bold text-purple-600 text-xl">0/10</span> correct!</p>
+            <p id="result-message" class="text-gray-500 text-sm mt-2"></p>
+        </div>
+        
         <button onclick="location.reload()" class="btn-primary text-white font-bold py-3 px-8 rounded-full w-full text-lg shadow-lg">
             Play Again
         </button>
@@ -361,22 +482,37 @@
         let cluesRevealed = 0;
         let isLevelComplete = false;
         let isMusicPlaying = false;
+        let wrongGuesses = 0;
+        let correctAnswers = 0;
+        const maxWrongGuesses = 3;
+
+        // Points based on clues used
+        const pointsTable = {
+            1: 300,
+            2: 200,
+            3: 100
+        };
 
         // Audio Elements
         const bgMusic = document.getElementById('bg-music');
         const correctSound = document.getElementById('correct-sound');
         const wrongSound = document.getElementById('wrong-sound');
+        const buzzerSound = document.getElementById('buzzer-sound');
         const clueSound = document.getElementById('clue-sound');
         const winSound = document.getElementById('win-sound');
+        const skipSound = document.getElementById('skip-sound');
         const musicToggle = document.getElementById('music-toggle');
         const musicIcon = document.getElementById('music-icon');
+        const xOverlay = document.getElementById('x-overlay');
 
         // Set background music volume lower
         bgMusic.volume = 0.3;
         correctSound.volume = 0.5;
         wrongSound.volume = 0.5;
+        buzzerSound.volume = 0.6;
         clueSound.volume = 0.4;
         winSound.volume = 0.5;
+        skipSound.volume = 0.5;
 
         function toggleMusic() {
             isMusicPlaying = !isMusicPlaying;
@@ -393,6 +529,13 @@
             }
         }
 
+        function showBigX() {
+            xOverlay.classList.add('show');
+            setTimeout(() => {
+                xOverlay.classList.remove('show');
+            }, 800);
+        }
+
         function playCorrectSound() {
             correctSound.currentTime = 0;
             correctSound.play().catch(e => console.log('Audio play failed:', e));
@@ -403,6 +546,11 @@
             wrongSound.play().catch(e => console.log('Audio play failed:', e));
         }
 
+        function playBuzzerSound() {
+            buzzerSound.currentTime = 0;
+            buzzerSound.play().catch(e => console.log('Audio play failed:', e));
+        }
+
         function playClueSound() {
             clueSound.currentTime = 0;
             clueSound.play().catch(e => console.log('Audio play failed:', e));
@@ -411,6 +559,11 @@
         function playWinSound() {
             winSound.currentTime = 0;
             winSound.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function playSkipSound() {
+            skipSound.currentTime = 0;
+            skipSound.play().catch(e => console.log('Audio play failed:', e));
         }
 
         function startGame() {
@@ -433,6 +586,7 @@
             currentLevel = index;
             cluesRevealed = 0;
             isLevelComplete = false;
+            wrongGuesses = 0;
             
             // Reset UI
             document.getElementById('level-indicator').innerText = currentLevel + 1;
@@ -443,6 +597,8 @@
             document.getElementById('place-name-reveal').classList.add('hidden');
             document.getElementById('next-clue-btn').classList.remove('hidden');
             document.getElementById('next-level-btn').classList.add('hidden');
+            document.getElementById('wrong-count').innerText = '0';
+            document.getElementById('wrong-count-display').style.background = 'rgba(239, 68, 68, 0.9)';
             
             // Load Image
             document.getElementById('place-image').src = gameData[currentLevel].image;
@@ -488,10 +644,11 @@
             const feedback = document.getElementById('feedback-msg');
             const validAnswers = gameData[currentLevel].answers;
 
-            // BUG FIX: Check if input is empty before validating
+            // Check if input is empty before validating
             if (!input || input.length === 0) {
                 handleError("Please enter a guess!");
-                playWrongSound();
+                playBuzzerSound();
+                showBigX();
                 return;
             }
 
@@ -500,13 +657,66 @@
                 handleSuccess();
             } else {
                 // Incorrect
-                handleError();
-                playWrongSound();
+                wrongGuesses++;
+                document.getElementById('wrong-count').innerText = wrongGuesses;
+                
+                // Update wrong count display color
+                if (wrongGuesses >= 2) {
+                    document.getElementById('wrong-count-display').style.background = 'rgba(220, 38, 38, 1)';
+                }
+                
+                // Show Big X and play buzzer
+                showBigX();
+                playBuzzerSound();
+                
+                // Check if max wrong guesses reached
+                if (wrongGuesses >= maxWrongGuesses) {
+                    handleMaxWrongGuesses();
+                } else {
+                    handleError();
+                }
             }
+        }
+
+        function handleMaxWrongGuesses() {
+            isLevelComplete = true;
+            const feedback = document.getElementById('feedback-msg');
+            feedback.innerText = "3 wrong guesses! Skipping to next...";
+            feedback.className = "mt-3 text-center font-semibold h-6 text-orange-600";
+            
+            playSkipSound();
+            
+            document.getElementById('guess-input').disabled = true;
+            document.getElementById('next-clue-btn').classList.add('hidden');
+            
+            // Reveal all clues
+            for(let i=0; i<3; i++) {
+                document.getElementById(`clue-${i}`).classList.add('active');
+            }
+
+            // Show Place Name
+            document.getElementById('place-name-reveal').innerText = gameData[currentLevel].place + " (Unanswered)";
+            document.getElementById('place-name-reveal').classList.remove('hidden');
+            
+            // Show skip button instead of next
+            document.getElementById('next-level-btn').innerHTML = 'Next Destination <i class="fas fa-arrow-right ml-2"></i>';
+            document.getElementById('next-level-btn').classList.remove('hidden');
+            
+            // Auto-skip after 2 seconds
+            setTimeout(() => {
+                if (currentLevel < gameData.length - 1) {
+                    nextLevel();
+                } else {
+                    endGame();
+                }
+            }, 2000);
         }
 
         function handleSuccess() {
             isLevelComplete = true;
+            correctAnswers++;
+            document.getElementById('correct-display').innerText = correctAnswers;
+            
             const feedback = document.getElementById('feedback-msg');
             feedback.innerText = "Correct! Amazing!";
             feedback.className = "mt-3 text-center font-semibold h-6 text-green-600";
@@ -528,9 +738,9 @@
             document.getElementById('place-name-reveal').innerText = gameData[currentLevel].place;
             document.getElementById('place-name-reveal').classList.remove('hidden');
 
-            // Add Score
-            const points = (4 - cluesRevealed) * 100; // More points for fewer clues
-            score += (points > 0 ? points : 100);
+            // Add Score based on clues used
+            const points = pointsTable[cluesRevealed] || 100;
+            score += points;
             document.getElementById('score-display').innerText = score;
 
             // Confetti
@@ -566,6 +776,24 @@
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('end-screen').classList.remove('hidden');
             document.getElementById('final-score').innerText = score;
+            document.getElementById('correct-final').innerText = correctAnswers;
+            document.getElementById('result-fraction').innerText = `${correctAnswers}/${gameData.length}`;
+            
+            // Set result message based on score
+            const resultMessage = document.getElementById('result-message');
+            const percentage = (correctAnswers / gameData.length) * 100;
+            
+            if (percentage === 100) {
+                resultMessage.innerText = "🏆 Perfect! You're a world travel expert!";
+            } else if (percentage >= 80) {
+                resultMessage.innerText = "🌟 Excellent! You know your geography well!";
+            } else if (percentage >= 60) {
+                resultMessage.innerText = "👍 Good job! Keep exploring the world!";
+            } else if (percentage >= 40) {
+                resultMessage.innerText = "📚 Not bad! There's more to discover!";
+            } else {
+                resultMessage.innerText = "🗺️ Keep learning! The world awaits you!";
+            }
             
             // Play win sound
             playWinSound();
